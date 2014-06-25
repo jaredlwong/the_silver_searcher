@@ -200,7 +200,9 @@ int is_binary(const void *buf, const size_t buf_len) {
     size_t suspicious_bytes = 0;
     size_t total_bytes = buf_len > 512 ? 512 : buf_len;
     const unsigned char *buf_c = buf;
+    const size_t *buf_s = buf;
     size_t i;
+    size_t has_null = 0;
 
     if (buf_len == 0) {
         return 0;
@@ -211,11 +213,16 @@ int is_binary(const void *buf, const size_t buf_len) {
         return 0;
     }
 
+    for (i = 0; i < total_bytes/8; i++) {
+        has_null |= (((buf_s[i]) - 0x0101010101010101UL) & ~(buf_s[i]) & 0x8080808080808080UL);
+    }
+
+    if (has_null > 0) {
+        return 1;
+    }
+
     for (i = 0; i < total_bytes; i++) {
-        if (buf_c[i] == '\0') {
-            /* NULL char. It's binary */
-            return 1;
-        } else if ((buf_c[i] < 7 || buf_c[i] > 14) && (buf_c[i] < 32 || buf_c[i] > 127)) {
+        if ((buf_c[i] < 7 || buf_c[i] > 14) && (buf_c[i] < 32 || buf_c[i] > 127)) {
             /* UTF-8 detection */
             if (buf_c[i] > 193 && buf_c[i] < 224 && i + 1 < total_bytes) {
                 i++;
